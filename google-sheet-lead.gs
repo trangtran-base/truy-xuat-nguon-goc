@@ -33,7 +33,9 @@ var COLUMNS = [
   ['utm_content', 'utm_content'],
   ['utm_term', 'utm_term'],
   ['gclid', 'gclid'],
-  ['fbclid', 'fbclid']
+  ['fbclid', 'fbclid'],
+  ['region', 'Khu vực'],
+  ['size', 'Quy mô nhân sự']
 ];
 
 function doPost(e) {
@@ -46,6 +48,8 @@ function doPost(e) {
     if (sheet.getLastRow() === 0) {
       sheet.appendRow(COLUMNS.map(function (c) { return c[1]; }));
       sheet.setFrozenRows(1);
+    } else {
+      ensureHeaders(sheet);
     }
     var row = COLUMNS.map(function (c) {
       if (c[0] === 'time') return Utilities.formatDate(new Date(), 'Asia/Ho_Chi_Minh', 'dd/MM/yyyy HH:mm:ss');
@@ -58,6 +62,17 @@ function doPost(e) {
   } finally {
     lock.releaseLock();
   }
+}
+
+// Sheet đã có dòng tiêu đề từ trước: điền tiêu đề cho các cột mới thêm vào COLUMNS (chỉ điền ô trống, không sửa ô đã có).
+function ensureHeaders(sheet) {
+  var range = sheet.getRange(1, 1, 1, COLUMNS.length);
+  var head = range.getValues()[0];
+  var changed = false;
+  COLUMNS.forEach(function (c, i) {
+    if (String(head[i]).trim() === '') { head[i] = c[1]; changed = true; }
+  });
+  if (changed) range.setValues([head]);
 }
 
 // Mở URL trên trình duyệt để kiểm tra script đã chạy.
