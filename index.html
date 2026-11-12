@@ -4882,8 +4882,25 @@
         document.cookie = name + '=' + encodeURIComponent(val) + exp + '; path=/; SameSite=Lax';
       }
 
+      function getSearchSource() {
+        var s = location.search;
+        if (!s) {
+          try {
+            if (window.top && window.top !== window && window.top.location.search) {
+              s = window.top.location.search;
+            }
+          } catch (e) { }
+        }
+        if (!s && document.referrer) {
+          try {
+            s = new URL(document.referrer).search;
+          } catch (e) { }
+        }
+        return s || '';
+      }
+
       var trackKeys = ['utm_campaign', 'utm_source', 'utm_medium', 'utm_content', 'utm_term', 'gclid', 'fbclid'];
-      var urlParams = new URLSearchParams(location.search);
+      var urlParams = new URLSearchParams(getSearchSource());
       trackKeys.forEach(function (k) {
         var val = urlParams.get(k);
         if (val) {
@@ -4932,14 +4949,13 @@
         }
         var btn = $('button[type=submit]', form), data = {};
         new FormData(form).forEach(function (v, k) { data[k] = k in data ? [].concat(data[k], v) : v; });
-        var qs = new URLSearchParams(location.search);
-        ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term', 'fbclid', 'gclid'].forEach(function (k) { if (qs.get(k)) data[k] = qs.get(k); });
+        var qs = new URLSearchParams(getSearchSource());
         trackKeys.forEach(function (k) {
           if (!data[k]) data[k] = qs.get(k) || getCookie(k) || '';
         });
         if (!data.fbp) data.fbp = qs.get('fbp') || getCookie('_fbp') || getCookie('fbp') || '';
         if (!data.ip_address) data.ip_address = getCookie('ip_address') || (ipEl && ipEl.value) || '';
-        data.page = location.href.split('#')[0];
+        data.page = (window.top && window.top !== window ? document.referrer : location.href).split('#')[0];
         btn.disabled = true;
         msg.className = 'form-msg';
         /* Có trang cảm ơn: gửi thông tin và chuyển sang trang cảm ơn ngay */
@@ -4971,10 +4987,9 @@
 
           // Append form data chuẩn hóa và UTM params vào URL trang cảm ơn
           var redirectUrl = CONFIG.thankYouUrl;
+          var exportFields = ['name', 'phone', 'company_name', 'email', 'company_address', 'company_size', 'industry', 'utm_campaign', 'utm_source', 'utm_medium', 'utm_content', 'utm_term', 'gclid', 'fbp', 'fbclid', 'ip_address'];
           try {
             var u = new URL(CONFIG.thankYouUrl, location.href);
-            var exportFields = ['name', 'phone', 'company_name', 'email', 'company_address', 'company_size', 'industry', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term', 'fbclid', 'gclid'];
-            var exportFields = ['name', 'phone', 'company_name', 'email', 'company_address', 'company_size', 'industry', 'utm_campaign', 'utm_source', 'utm_medium', 'utm_content', 'utm_term', 'gclid', 'fbp', 'fbclid', 'ip_address'];
             exportFields.forEach(function (k) {
               if (data[k] !== undefined && data[k] !== null && String(data[k]).trim() !== '') {
                 u.searchParams.set(k, String(data[k]).trim());
@@ -4984,18 +4999,23 @@
           } catch (e) {
             var sep = CONFIG.thankYouUrl.indexOf('?') === -1 ? '?' : '&';
             var q = new URLSearchParams();
-            ['name', 'phone', 'company_name', 'email', 'company_address', 'company_size', 'industry', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term', 'fbclid', 'gclid'].forEach(function (k) {
-              ['name', 'phone', 'company_name', 'email', 'company_address', 'company_size', 'industry', 'utm_campaign', 'utm_source', 'utm_medium', 'utm_content', 'utm_term', 'gclid', 'fbp', 'fbclid', 'ip_address'].forEach(function (k) {
-                if (data[k]) q.set(k, String(data[k]).trim());
-              });
-              redirectUrl = CONFIG.thankYouUrl + sep + q.toString();
-            }
-
-      setTimeout(function () {
-              window.location.href = redirectUrl;
-            }, 100);
-            return;
+            exportFields.forEach(function (k) {
+              if (data[k]) q.set(k, String(data[k]).trim());
+            });
+            redirectUrl = CONFIG.thankYouUrl + sep + q.toString();
           }
+
+          setTimeout(function () {
+            try {
+              if (window.top && window.top !== window) {
+                window.top.location.href = redirectUrl;
+                return;
+              }
+            } catch (e) { }
+            window.location.href = redirectUrl;
+          }, 100);
+          return;
+        }
 
           /* Không có trang cảm ơn: hiện màn hình cảm ơn ngay trong form.
              Nếu gửi lỗi thì quay lại form, điền lại thông tin khách đã nhập và báo lỗi. */
