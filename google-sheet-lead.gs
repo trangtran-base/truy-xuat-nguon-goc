@@ -24,7 +24,7 @@ var COLUMNS = [
   ['name', 'Họ và tên'],
   ['phone', 'Số điện thoại / Zalo'],
   ['email', 'Email'],
-  ['company', 'Công ty'],
+  ['company_name', 'Công ty'],
   ['industry', 'Ngành hàng'],
   ['page', 'Trang'],
   ['utm_source', 'utm_source'],
@@ -34,8 +34,8 @@ var COLUMNS = [
   ['utm_term', 'utm_term'],
   ['gclid', 'gclid'],
   ['fbclid', 'fbclid'],
-  ['region', 'Khu vực'],
-  ['size', 'Quy mô nhân sự']
+  ['company_address', 'Khu vực'],
+  ['company_size', 'Quy mô nhân sự']
 ];
 
 function doPost(e) {
@@ -43,6 +43,11 @@ function doPost(e) {
   lock.waitLock(10000); // hai khách gửi cùng lúc không ghi đè lên nhau
   try {
     var p = (e && e.parameter) || {};
+    // Hỗ trợ cả trường cũ và trường mới chuẩn hóa
+    p.company_name = p.company_name || p.company;
+    p.company_address = p.company_address || p.region;
+    p.company_size = p.company_size || p.size;
+
     var book = SpreadsheetApp.openById(SHEET_ID);
     var sheet = SHEET_NAME ? book.getSheetByName(SHEET_NAME) : book.getSheets()[0];
     if (sheet.getLastRow() === 0) {
