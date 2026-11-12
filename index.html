@@ -730,6 +730,15 @@ footer a{text-underline-offset:2px}
       <h2>Đánh giá khả năng truy xuất</h2>
       <p class="small">Cùng chuyên gia Base rà soát dữ liệu theo một đơn hàng thực tế và xác định những thông tin cần bổ sung.</p>
       <form id="lead" novalidate>
+        <input type="hidden" name="utm_campaign" id="f-utm_campaign">
+        <input type="hidden" name="utm_source" id="f-utm_source">
+        <input type="hidden" name="utm_medium" id="f-utm_medium">
+        <input type="hidden" name="utm_content" id="f-utm_content">
+        <input type="hidden" name="utm_term" id="f-utm_term">
+        <input type="hidden" name="gclid" id="f-gclid">
+        <input type="hidden" name="fbp" id="f-fbp">
+        <input type="hidden" name="fbclid" id="f-fbclid">
+        <input type="hidden" name="ip_address" id="f-ip_address">
         <div class="f2">
           <div class="field">
             <label for="f-name">Họ và tên <span class="req">*</span></label>
@@ -1408,6 +1417,55 @@ var CONFIG = {
     window.scrollTo({ top: 0, behavior: reduced ? 'auto' : 'smooth' });
   });
 
+  /* Xử lý Cookies và Tracking Parameters (URL -> Cookies -> Form) */
+  function getCookie(name) {
+    var match = document.cookie.match(new RegExp('(?:^|;\\s*)' + name.replace(/([.*+?^=!:${}()|[\]/\\])/g, '\\$1') + '=([^;]*)'));
+    return match ? decodeURIComponent(match[1]) : '';
+  }
+  function setCookie(name, val, days) {
+    if (!val) return;
+    var exp = '';
+    if (days) {
+      var d = new Date();
+      d.setTime(d.getTime() + (days * 24 * 60 * 60 * 1000));
+      exp = '; expires=' + d.toUTCString();
+    }
+    document.cookie = name + '=' + encodeURIComponent(val) + exp + '; path=/; SameSite=Lax';
+  }
+
+  var trackKeys = ['utm_campaign', 'utm_source', 'utm_medium', 'utm_content', 'utm_term', 'gclid', 'fbclid'];
+  var urlParams = new URLSearchParams(location.search);
+  trackKeys.forEach(function (k) {
+    var val = urlParams.get(k);
+    if (val) {
+      setCookie(k, val, 30);
+    } else {
+      val = getCookie(k);
+    }
+    var el = $('#f-' + k);
+    if (el && val) el.value = val;
+  });
+
+  // fbp: ưu tiên URL param > cookie _fbp (Facebook Pixel) > cookie fbp
+  var fbpVal = urlParams.get('fbp') || getCookie('_fbp') || getCookie('fbp');
+  if (urlParams.get('fbp') && fbpVal) setCookie('fbp', fbpVal, 30);
+  var fbpEl = $('#f-fbp');
+  if (fbpEl && fbpVal) fbpEl.value = fbpVal;
+
+  // ip_address: từ cookie hoặc gọi API lấy IP
+  var ipEl = $('#f-ip_address');
+  var savedIp = getCookie('ip_address');
+  if (savedIp && ipEl) ipEl.value = savedIp;
+  fetch('https://api.ipify.org?format=json')
+    .then(function (r) { return r.json(); })
+    .then(function (d) {
+      if (d && d.ip) {
+        if (ipEl) ipEl.value = d.ip;
+        setCookie('ip_address', d.ip, 1);
+      }
+    })
+    .catch(function () {});
+
   form.addEventListener('submit', function (e) {
     e.preventDefault();
     var firstBad = null;
@@ -1426,7 +1484,11 @@ var CONFIG = {
     var btn = $('button[type=submit]', form), data = {};
     new FormData(form).forEach(function (v, k) { data[k] = k in data ? [].concat(data[k], v) : v; });
     var qs = new URLSearchParams(location.search);
-    ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term', 'fbclid', 'gclid'].forEach(function (k) { if (qs.get(k)) data[k] = qs.get(k); });
+    trackKeys.forEach(function (k) {
+      if (!data[k]) data[k] = qs.get(k) || getCookie(k) || '';
+    });
+    if (!data.fbp) data.fbp = qs.get('fbp') || getCookie('_fbp') || getCookie('fbp') || '';
+    if (!data.ip_address) data.ip_address = getCookie('ip_address') || (ipEl && ipEl.value) || '';
     data.page = location.href.split('#')[0];
     btn.disabled = true;
     msg.className = 'form-msg';
@@ -1461,7 +1523,7 @@ var CONFIG = {
       var redirectUrl = CONFIG.thankYouUrl;
       try {
         var u = new URL(CONFIG.thankYouUrl, location.href);
-        var exportFields = ['name', 'phone', 'company_name', 'email', 'company_address', 'company_size', 'industry', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term', 'fbclid', 'gclid'];
+        var exportFields = ['name', 'phone', 'company_name', 'email', 'company_address', 'company_size', 'industry', 'utm_campaign', 'utm_source', 'utm_medium', 'utm_content', 'utm_term', 'gclid', 'fbp', 'fbclid', 'ip_address'];
         exportFields.forEach(function (k) {
           if (data[k] !== undefined && data[k] !== null && String(data[k]).trim() !== '') {
             u.searchParams.set(k, String(data[k]).trim());
@@ -1471,7 +1533,7 @@ var CONFIG = {
       } catch (e) {
         var sep = CONFIG.thankYouUrl.indexOf('?') === -1 ? '?' : '&';
         var q = new URLSearchParams();
-        ['name', 'phone', 'company_name', 'email', 'company_address', 'company_size', 'industry', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term', 'fbclid', 'gclid'].forEach(function (k) {
+        ['name', 'phone', 'company_name', 'email', 'company_address', 'company_size', 'industry', 'utm_campaign', 'utm_source', 'utm_medium', 'utm_content', 'utm_term', 'gclid', 'fbp', 'fbclid', 'ip_address'].forEach(function (k) {
           if (data[k]) q.set(k, String(data[k]).trim());
         });
         redirectUrl = CONFIG.thankYouUrl + sep + q.toString();

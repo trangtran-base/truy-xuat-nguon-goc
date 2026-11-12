@@ -27,13 +27,15 @@ var COLUMNS = [
   ['company_name', 'Công ty'],
   ['industry', 'Ngành hàng'],
   ['page', 'Trang'],
+  ['utm_campaign', 'utm_campaign'],
   ['utm_source', 'utm_source'],
   ['utm_medium', 'utm_medium'],
-  ['utm_campaign', 'utm_campaign'],
   ['utm_content', 'utm_content'],
   ['utm_term', 'utm_term'],
   ['gclid', 'gclid'],
+  ['fbp', 'fbp'],
   ['fbclid', 'fbclid'],
+  ['ip_address', 'ip_address'],
   ['company_address', 'Khu vực'],
   ['company_size', 'Quy mô nhân sự']
 ];
