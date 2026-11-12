@@ -4918,6 +4918,28 @@
       var fbpEl = $('#f-fbp');
       if (fbpEl && fbpVal) fbpEl.value = fbpVal;
 
+      // Lắng nghe postMessage từ trang cha (khi nhúng trong iframe)
+      window.addEventListener('message', function (ev) {
+        if (!ev.data) return;
+        var s = '';
+        if (typeof ev.data === 'string' && (ev.data.indexOf('utm_') !== -1 || ev.data.indexOf('gclid') !== -1)) s = ev.data;
+        else if (ev.data.search) s = ev.data.search;
+        else if (ev.data.type === 'SET_UTM' && ev.data.params) s = ev.data.params;
+        if (s) {
+          var p = new URLSearchParams(s.charAt(0) === '?' ? s : '?' + s);
+          trackKeys.forEach(function (k) {
+            var v = p.get(k);
+            if (v) {
+              setCookie(k, v, 30);
+              var input = $('#f-' + k);
+              if (input) input.value = v;
+            }
+          });
+          var fbpV = p.get('fbp');
+          if (fbpV && fbpEl) { fbpEl.value = fbpV; setCookie('fbp', fbpV, 30); }
+        }
+      });
+
       // ip_address: từ cookie hoặc gọi API lấy IP
       var ipEl = $('#f-ip_address');
       var savedIp = getCookie('ip_address');
