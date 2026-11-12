@@ -122,6 +122,7 @@ function reply(obj) {
 
 // Gửi email thông báo khi có lead đăng ký mới
 function sendLeadNotification(p) {
+  p = p || {};
   if (!NOTIFY_EMAILS) return;
   try {
     var timeStr = Utilities.formatDate(new Date(), 'Asia/Ho_Chi_Minh', 'dd/MM/yyyy HH:mm:ss');
