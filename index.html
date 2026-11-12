@@ -4899,6 +4899,13 @@
         return s || '';
       }
 
+      var defaultUtm = {
+        utm_campaign: 'b118-truy-xuat-nguon-goc',
+        utm_source: 'landing_page',
+        utm_medium: 'conversion',
+        utm_content: 'b118-truy-xuat-nguon-goc'
+      };
+
       var trackKeys = ['utm_campaign', 'utm_source', 'utm_medium', 'utm_content', 'utm_term', 'gclid', 'fbclid'];
       var urlParams = new URLSearchParams(getSearchSource());
       trackKeys.forEach(function (k) {
@@ -4906,7 +4913,7 @@
         if (val) {
           setCookie(k, val, 30);
         } else {
-          val = getCookie(k);
+          val = getCookie(k) || defaultUtm[k] || '';
         }
         var el = $('#f-' + k);
         if (el && val) el.value = val;
@@ -4973,7 +4980,7 @@
         new FormData(form).forEach(function (v, k) { data[k] = k in data ? [].concat(data[k], v) : v; });
         var qs = new URLSearchParams(getSearchSource());
         trackKeys.forEach(function (k) {
-          if (!data[k]) data[k] = qs.get(k) || getCookie(k) || '';
+          if (!data[k]) data[k] = qs.get(k) || getCookie(k) || defaultUtm[k] || '';
         });
         if (!data.fbp) data.fbp = qs.get('fbp') || getCookie('_fbp') || getCookie('fbp') || '';
         if (!data.ip_address) data.ip_address = getCookie('ip_address') || (ipEl && ipEl.value) || '';
