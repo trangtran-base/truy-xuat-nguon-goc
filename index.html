@@ -1427,18 +1427,37 @@ var CONFIG = {
     data.page = location.href.split('#')[0];
     btn.disabled = true;
     msg.className = 'form-msg';
-    /* Gửi dạng form thường: Google Apps Script không trả lời yêu cầu JSON từ trình duyệt (CORS).
-       keepalive: vẫn gửi xong dù trang đã chuyển sang trang cảm ơn. */
-    var sending = fetch(CONFIG.formEndpoint, { method: 'POST', body: new URLSearchParams(data), keepalive: true });
-    /* Có trang cảm ơn: chuyển sang ngay, không chờ Google Apps Script (thường mất 2-4 giây). */
+    /* Có trang cảm ơn: gửi thông tin và chuyển sang trang cảm ơn ngay */
     if (CONFIG.thankYouUrl) {
+      var bodyStr = new URLSearchParams(data).toString();
+      try {
+        if (window.navigator && navigator.sendBeacon) {
+          navigator.sendBeacon(CONFIG.formEndpoint, new Blob([bodyStr], { type: 'application/x-www-form-urlencoded' }));
+        } else {
+          fetch(CONFIG.formEndpoint, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: bodyStr,
+            keepalive: true
+          }).catch(function () {});
+        }
+      } catch (err) {
+        try {
+          fetch(CONFIG.formEndpoint, { method: 'POST', mode: 'no-cors', body: bodyStr }).catch(function () {});
+        } catch (e) {}
+      }
       track('Lead', { form: 'kiem-tra-ho-so-eudr' });
-      setTimeout(function () { location.href = CONFIG.thankYouUrl; }, 150);
+      setTimeout(function () {
+        window.location.href = CONFIG.thankYouUrl;
+      }, 100);
       return;
     }
+
     /* Không có trang cảm ơn: hiện màn hình cảm ơn ngay trong form.
        Nếu gửi lỗi thì quay lại form, điền lại thông tin khách đã nhập và báo lỗi. */
     showDone(data);
+    var sending = fetch(CONFIG.formEndpoint, { method: 'POST', body: new URLSearchParams(data) });
     sending
       .then(function (r) {
         if (!r.ok) throw new Error(r.status);
