@@ -155,3 +155,19 @@ function sendLeadNotification(p) {
     Logger.log('Lỗi gửi email thông báo: ' + mailErr);
   }
 }
+
+// Hàm chạy thử để kích hoạt hộp thoại cấp quyền gửi email của Google (Chỉ cần chạy 1 lần)
+function testSendEmail() {
+  sendLeadNotification({
+    name: 'Nguyễn Văn Test',
+    phone: '0988888888',
+    email: 'test@base.vn',
+    company_name: 'Công ty Test Base',
+    company_address: 'Khu vực Miền Bắc',
+    company_size: '31 - 60 nhân sự',
+    industry: 'Gỗ, giấy, bao bì',
+    utm_source: 'facebook',
+    utm_campaign: 'eudr_2026',
+    page: 'https://signup.base.vn/truy-xuat-nguon-goc/'
+  });
+}
