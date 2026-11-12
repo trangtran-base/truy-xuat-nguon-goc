@@ -17,6 +17,7 @@
 
 var SHEET_ID = '17-c13KvMGELMsiH3Mk5wUfK7CwbUvzhS9ATWuVCNMrA';
 var SHEET_NAME = ''; // Để trống: ghi vào tab đầu tiên. Hoặc điền tên tab, VD 'Lead EUDR'.
+var NOTIFY_EMAILS = 'trang.tran@base.vn, hoa.nguyen02@base.vn'; // Danh sách email nhận thông báo khi có lead mới
 
 // Thứ tự cột trong sheet: [tên trường gửi từ form, tiêu đề cột]
 var COLUMNS = [
@@ -63,6 +64,10 @@ function doPost(e) {
       return asText(p[c[0]]);
     });
     sheet.appendRow(row);
+
+    // Gửi email thông báo cho team phụ trách lead
+    sendLeadNotification(p);
+
     return reply({ ok: true });
   } catch (err) {
     return reply({ ok: false, error: String(err) });
@@ -95,4 +100,58 @@ function asText(v) {
 
 function reply(obj) {
   return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
+}
+
+// Gửi email thông báo khi có lead đăng ký mới
+function sendLeadNotification(p) {
+  if (!NOTIFY_EMAILS) return;
+  try {
+    var timeStr = Utilities.formatDate(new Date(), 'Asia/Ho_Chi_Minh', 'dd/MM/yyyy HH:mm:ss');
+    var subject = '[Lead Mới - EUDR] ' + (p.name || 'Khách hàng') + ' - ' + (p.company_name || p.phone || '');
+
+    var htmlBody = ''
+      + '<div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">'
+      + '  <div style="background-color: #1b7a4e; color: #ffffff; padding: 18px 24px;">'
+      + '    <h2 style="margin: 0; font-size: 20px;">Thông Báo Lead Đăng Ký Mới</h2>'
+      + '    <p style="margin: 4px 0 0; font-size: 13px; opacity: 0.9;">Giải pháp Truy xuất nguồn gốc chuẩn EUDR | Base.vn</p>'
+      + '  </div>'
+      + '  <div style="padding: 24px; background-color: #ffffff;">'
+      + '    <h3 style="margin-top: 0; color: #1c2126; border-bottom: 2px solid #e6f2ec; padding-bottom: 8px;">Thông tin khách hàng:</h3>'
+      + '    <table style="width: 100%; border-collapse: collapse; font-size: 14px; line-height: 1.6;">'
+      + '      <tr><td style="padding: 6px 0; color: #6b737b; width: 140px;"><strong>Họ và tên:</strong></td><td style="padding: 6px 0; color: #1c2126;"><strong>' + (p.name || '-') + '</strong></td></tr>'
+      + '      <tr><td style="padding: 6px 0; color: #6b737b;"><strong>Số điện thoại:</strong></td><td style="padding: 6px 0; color: #1b7a4e;"><strong><a href="tel:' + (p.phone || '') + '" style="color: #1b7a4e; text-decoration: none;">' + (p.phone || '-') + '</a></strong></td></tr>'
+      + '      <tr><td style="padding: 6px 0; color: #6b737b;"><strong>Email:</strong></td><td style="padding: 6px 0; color: #1c2126;"><a href="mailto:' + (p.email || '') + '" style="color: #1b7a4e;">' + (p.email || '-') + '</a></td></tr>'
+      + '      <tr><td style="padding: 6px 0; color: #6b737b;"><strong>Công ty:</strong></td><td style="padding: 6px 0; color: #1c2126;">' + (p.company_name || '-') + '</td></tr>'
+      + '      <tr><td style="padding: 6px 0; color: #6b737b;"><strong>Khu vực:</strong></td><td style="padding: 6px 0; color: #1c2126;">' + (p.company_address || '-') + '</td></tr>'
+      + '      <tr><td style="padding: 6px 0; color: #6b737b;"><strong>Quy mô nhân sự:</strong></td><td style="padding: 6px 0; color: #1c2126;">' + (p.company_size || '-') + '</td></tr>'
+      + '      <tr><td style="padding: 6px 0; color: #6b737b;"><strong>Ngành hàng:</strong></td><td style="padding: 6px 0; color: #1c2126;">' + (p.industry || '-') + '</td></tr>'
+      + '      <tr><td style="padding: 6px 0; color: #6b737b;"><strong>Thời gian:</strong></td><td style="padding: 6px 0; color: #1c2126;">' + timeStr + '</td></tr>'
+      + '    </table>'
+      + '    <h3 style="margin-top: 24px; color: #1c2126; border-bottom: 2px solid #e6f2ec; padding-bottom: 8px;">Thông tin nguồn chiến dịch:</h3>'
+      + '    <table style="width: 100%; border-collapse: collapse; font-size: 13px; color: #4b535b;">'
+      + '      <tr><td style="padding: 4px 0; width: 140px;">utm_source:</td><td>' + (p.utm_source || '-') + '</td></tr>'
+      + '      <tr><td style="padding: 4px 0;">utm_campaign:</td><td>' + (p.utm_campaign || '-') + '</td></tr>'
+      + '      <tr><td style="padding: 4px 0;">utm_medium:</td><td>' + (p.utm_medium || '-') + '</td></tr>'
+      + '      <tr><td style="padding: 4px 0;">utm_content:</td><td>' + (p.utm_content || '-') + '</td></tr>'
+      + '      <tr><td style="padding: 4px 0;">utm_term:</td><td>' + (p.utm_term || '-') + '</td></tr>'
+      + '      <tr><td style="padding: 4px 0;">gclid:</td><td>' + (p.gclid || '-') + '</td></tr>'
+      + '      <tr><td style="padding: 4px 0;">fbclid:</td><td>' + (p.fbclid || '-') + '</td></tr>'
+      + '      <tr><td style="padding: 4px 0;">fbp:</td><td>' + (p.fbp || '-') + '</td></tr>'
+      + '      <tr><td style="padding: 4px 0;">IP Address:</td><td>' + (p.ip_address || '-') + '</td></tr>'
+      + '      <tr><td style="padding: 4px 0;">Trang đăng ký:</td><td>' + (p.page || '-') + '</td></tr>'
+      + '    </table>'
+      + '  </div>'
+      + '  <div style="background-color: #f4f6f5; padding: 12px 24px; font-size: 12px; color: #6b737b; text-align: center;">'
+      + '    Email tự động gửi từ hệ thống Landing Page Base EUDR'
+      + '  </div>'
+      + '</div>';
+
+    MailApp.sendEmail({
+      to: NOTIFY_EMAILS,
+      subject: subject,
+      htmlBody: htmlBody
+    });
+  } catch (mailErr) {
+    Logger.log('Lỗi gửi email thông báo: ' + mailErr);
+  }
 }
