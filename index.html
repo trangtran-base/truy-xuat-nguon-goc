@@ -5046,30 +5046,30 @@
           return;
         }
 
-          /* Không có trang cảm ơn: hiện màn hình cảm ơn ngay trong form.
-             Nếu gửi lỗi thì quay lại form, điền lại thông tin khách đã nhập và báo lỗi. */
-          showDone(data);
-          var sending = fetch(CONFIG.formEndpoint, { method: 'POST', body: new URLSearchParams(data) });
-          sending
-            .then(function (r) {
-              if (!r.ok) throw new Error(r.status);
-              return r.json().catch(function () { return {}; });
-            })
-            .then(function (res) {
-              if (res && res.ok === false) throw new Error(res.error || 'sheet');
-              if (card.classList.contains('is-done')) form.reset();
-              track('Lead', { form: 'kiem-tra-ho-so-eudr' });
-            })
-            .catch(function () {
-              hideDone();
-              $$('input, select', form).forEach(function (el) {
-                if (!(el.name in data)) { if (el.type === 'checkbox') el.checked = false; return; }
-                if (el.type === 'checkbox') el.checked = true; else el.value = data[el.name];
-              });
-              show('fail', 'Chưa gửi được đăng ký. Anh chị vui lòng thử lại.');
-            })
-            .then(function () { btn.disabled = false; });
-        });
+        /* Không có trang cảm ơn: hiện màn hình cảm ơn ngay trong form.
+           Nếu gửi lỗi thì quay lại form, điền lại thông tin khách đã nhập và báo lỗi. */
+        showDone(data);
+        var sending = fetch(CONFIG.formEndpoint, { method: 'POST', body: new URLSearchParams(data) });
+        sending
+          .then(function (r) {
+            if (!r.ok) throw new Error(r.status);
+            return r.json().catch(function () { return {}; });
+          })
+          .then(function (res) {
+            if (res && res.ok === false) throw new Error(res.error || 'sheet');
+            if (card.classList.contains('is-done')) form.reset();
+            track('Lead', { form: 'kiem-tra-ho-so-eudr' });
+          })
+          .catch(function () {
+            hideDone();
+            $$('input, select', form).forEach(function (el) {
+              if (!(el.name in data)) { if (el.type === 'checkbox') el.checked = false; return; }
+              if (el.type === 'checkbox') el.checked = true; else el.value = data[el.name];
+            });
+            show('fail', 'Chưa gửi được đăng ký. Anh chị vui lòng thử lại.');
+          })
+          .then(function () { btn.disabled = false; });
+      });
     })();
   </script>
 </body>
