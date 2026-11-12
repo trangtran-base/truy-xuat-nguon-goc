@@ -16,7 +16,8 @@
  */
 
 var SHEET_ID = '17-c13KvMGELMsiH3Mk5wUfK7CwbUvzhS9ATWuVCNMrA';
-var SHEET_NAME = ''; // Để trống: ghi vào tab đầu tiên. Hoặc điền tên tab, VD 'Lead EUDR'.
+var SHEET_GID = '874816478'; // GID của tab nhận lead (từ URL: gid=874816478)
+var SHEET_NAME = ''; // Để trống hoặc điền tên tab. Ưu tiên tìm theo SHEET_GID trước.
 var NOTIFY_EMAILS = 'trang.tran@base.vn, hoa.nguyen02@base.vn'; // Danh sách email nhận thông báo khi có lead mới
 
 // Thứ tự cột trong sheet: [tên trường gửi từ form, tiêu đề cột]
@@ -52,7 +53,7 @@ function doPost(e) {
     p.company_size = p.company_size || p.size;
 
     var book = SpreadsheetApp.openById(SHEET_ID);
-    var sheet = SHEET_NAME ? book.getSheetByName(SHEET_NAME) : book.getSheets()[0];
+    var sheet = getTargetSheet(book);
     if (sheet.getLastRow() === 0) {
       sheet.appendRow(COLUMNS.map(function (c) { return c[1]; }));
       sheet.setFrozenRows(1);
@@ -74,6 +75,23 @@ function doPost(e) {
   } finally {
     lock.releaseLock();
   }
+}
+
+// Tìm đúng tab theo GID hoặc Tên tab
+function getTargetSheet(book) {
+  var sheets = book.getSheets();
+  if (SHEET_GID) {
+    for (var i = 0; i < sheets.length; i++) {
+      if (String(sheets[i].getSheetId()) === String(SHEET_GID)) {
+        return sheets[i];
+      }
+    }
+  }
+  if (SHEET_NAME) {
+    var s = book.getSheetByName(SHEET_NAME);
+    if (s) return s;
+  }
+  return sheets[0];
 }
 
 // Sheet đã có dòng tiêu đề từ trước: điền tiêu đề cho các cột mới thêm vào COLUMNS (chỉ điền ô trống, không sửa ô đã có).
