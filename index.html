@@ -3677,6 +3677,10 @@
             <input type="hidden" name="fbp" id="f-fbp">
             <input type="hidden" name="fbclid" id="f-fbclid">
             <input type="hidden" name="ip_address" id="f-ip_address">
+            <div aria-hidden="true" style="position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden">
+              <label for="f-website">Website</label>
+              <input type="text" name="website" id="f-website" tabindex="-1" autocomplete="off">
+            </div>
             <div class="f2">
               <div class="field">
                 <label for="f-name">Họ và tên <span class="req">*</span></label>
@@ -4592,6 +4596,8 @@
       termsUrl: 'https://base.vn/dieu-khoan',
       thankYouUrl: 'https://signup.base.vn/thank-you-txng/', // Trang cảm ơn sau khi gửi form. Để trống: hiện màn hình cảm ơn ngay trong form.
       formEndpoint: 'https://script.google.com/macros/s/AKfycbzjXWu-I5tKaUPoQkQbMLU96hvCtrUjEIvLUuuxSQvgKlKydWGWFM-vSS0TAvRP5qRi/exec',  // URL ứng dụng web Google Apps Script (xem google-sheet-lead.gs), dạng https://script.google.com/macros/s/.../exec
+      n8nWebhook: 'https://n8n.operation.basesystem.dev/webhook/98b60908-3897-434a-823a-3d12cf11841e', // Webhook n8n nhận lead (gửi song song với Google Sheet). Để trống để tắt.
+      n8nKey: 'e24feaa130b6f4771a911497', // Mã nhận diện gửi kèm lead sang n8n (field form_key). n8n chỉ nhận lead có đúng mã này.
       ga4Id: '',         // Mã đo lường GA4, VD: 'G-XXXXXXXXXX'
       fbPixelId: '',     // Mã Facebook Pixel, VD: '1234567890'
       deadline: '2026-12-30' // Mốc EUDR cho doanh nghiệp lớn và vừa
@@ -4961,6 +4967,44 @@
         })
         .catch(function () { });
 
+      /* Gửi dữ liệu dạng urlencoded, không chờ phản hồi (vẫn gửi được khi chuyển trang) */
+      function beacon(url, bodyStr) {
+        try {
+          if (window.navigator && navigator.sendBeacon &&
+            navigator.sendBeacon(url, new Blob([bodyStr], { type: 'application/x-www-form-urlencoded' }))) return;
+        } catch (err) { }
+        try {
+          fetch(url, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: bodyStr,
+            keepalive: true
+          }).catch(function () { });
+        } catch (e) { }
+      }
+
+      var pageStart = Date.now();
+
+      /* Dữ liệu gửi n8n: đổi khu vực và quy mô nhân sự sang mã ngắn */
+      var n8nRegion = { 'Khu vực Miền Bắc': 'hanoi', 'Khu vực Miền Nam': 'hochiminh', 'Khu vực Miền Trung': 'other' };
+      var n8nSize = {
+        '1 - 15 nhân sự': '1-15', '16 - 30 nhân sự': '16-30', '31 - 60 nhân sự': '31-60',
+        '61 - 200 nhân sự': '61-200', '201 - 500 nhân sự': '201-500', '501 - 1000 nhân sự': '501-1000',
+        '> 1000 nhân sự': '›1000'
+      };
+      function n8nBody(data) {
+        var d = {};
+        for (var k in data) d[k] = data[k];
+        d.company_address = n8nRegion[data.company_address] || 'other';
+        if ('region' in d) d.region = d.company_address;
+        d.company_size = n8nSize[data.company_size] || data.company_size || '';
+        if ('size' in d) d.size = d.company_size;
+        d.form_key = CONFIG.n8nKey || '';
+        d.form_time = Math.round((Date.now() - pageStart) / 1000); // số giây từ lúc mở trang đến lúc gửi
+        return new URLSearchParams(d).toString();
+      }
+
       form.addEventListener('submit', function (e) {
         e.preventDefault();
         var firstBad = null;
@@ -4978,6 +5022,10 @@
         }
         var btn = $('button[type=submit]', form), data = {};
         new FormData(form).forEach(function (v, k) { data[k] = k in data ? [].concat(data[k], v) : v; });
+        /* Ô bẫy bot: người thật không thấy ô này. Nếu bị điền thì giả vờ gửi thành công, không gửi dữ liệu đi đâu. */
+        var bot = String(data.website || '').trim() !== '';
+        delete data.website;
+        if (bot) { showDone(data); return; }
         var qs = new URLSearchParams(getSearchSource());
         trackKeys.forEach(function (k) {
           if (!data[k]) data[k] = qs.get(k) || getCookie(k) || defaultUtm[k] || '';
@@ -4995,23 +5043,8 @@
           data.size = data.company_size;
 
           var bodyStr = new URLSearchParams(data).toString();
-          try {
-            if (window.navigator && navigator.sendBeacon) {
-              navigator.sendBeacon(CONFIG.formEndpoint, new Blob([bodyStr], { type: 'application/x-www-form-urlencoded' }));
-            } else {
-              fetch(CONFIG.formEndpoint, {
-                method: 'POST',
-                mode: 'no-cors',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: bodyStr,
-                keepalive: true
-              }).catch(function () { });
-            }
-          } catch (err) {
-            try {
-              fetch(CONFIG.formEndpoint, { method: 'POST', mode: 'no-cors', body: bodyStr }).catch(function () { });
-            } catch (e) { }
-          }
+          beacon(CONFIG.formEndpoint, bodyStr);
+          if (CONFIG.n8nWebhook) beacon(CONFIG.n8nWebhook, n8nBody(data));
           track('Lead', { form: 'kiem-tra-ho-so-eudr' });
 
           // Append form data chuẩn hóa và UTM params vào URL trang cảm ơn
@@ -5049,6 +5082,7 @@
         /* Không có trang cảm ơn: hiện màn hình cảm ơn ngay trong form.
            Nếu gửi lỗi thì quay lại form, điền lại thông tin khách đã nhập và báo lỗi. */
         showDone(data);
+        if (CONFIG.n8nWebhook) beacon(CONFIG.n8nWebhook, n8nBody(data));
         var sending = fetch(CONFIG.formEndpoint, { method: 'POST', body: new URLSearchParams(data) });
         sending
           .then(function (r) {
