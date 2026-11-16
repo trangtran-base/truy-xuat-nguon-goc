@@ -20,15 +20,19 @@ var SHEET_GID = '874816478'; // GID của tab nhận lead (từ URL: gid=8748164
 var SHEET_NAME = ''; // Để trống hoặc điền tên tab. Ưu tiên tìm theo SHEET_GID trước.
 var NOTIFY_EMAILS = 'trang.tran@base.vn, hoa.nguyen02@base.vn'; // Danh sách email nhận thông báo khi có lead mới
 
-// Thứ tự cột trong sheet: [tên trường gửi từ form, tiêu đề cột]
+var SCRIPT_VERSION = 'v4-chuan-hoa-ten-cot'; // Mở URL /exec trên trình duyệt để xem bản đang chạy
+
+// [tên trường gửi từ form, tiêu đề cột CHUẨN trong sheet, ...tên tiêu đề cũ]
+// Script ghi theo TÊN tiêu đề cột nên thứ tự cột trong sheet không quan trọng.
+// Gặp tiêu đề cũ (vd "Họ và tên") thì tự đổi thành tiêu đề chuẩn (vd "name").
 var COLUMNS = [
-  ['time', 'Thời gian'],
-  ['name', 'Họ và tên'],
-  ['phone', 'Số điện thoại / Zalo'],
+  ['time', 'time', 'Thời gian', 'Thời điểm', 'Ngày'],
+  ['name', 'name', 'Họ và tên', 'Họ tên', 'Tên'],
+  ['phone', 'phone', 'SĐT / Zalo', 'SĐT/Zalo', 'Số điện thoại / Zalo', 'SĐT', 'Số điện thoại', 'Điện thoại'],
   ['email', 'Email'],
-  ['company_name', 'Công ty'],
-  ['industry', 'Ngành hàng'],
-  ['page', 'Trang'],
+  ['company_name', 'company_name', 'Công ty', 'Tên công ty', 'company'],
+  ['industry', 'industry', 'Ngành hàng', 'Ngành'],
+  ['page_url', 'page_url', 'Trang', 'page', 'URL', 'Landing page', 'Trang đăng ký'],
   ['utm_campaign', 'utm_campaign'],
   ['utm_source', 'utm_source'],
   ['utm_medium', 'utm_medium'],
@@ -38,8 +42,8 @@ var COLUMNS = [
   ['fbp', 'fbp'],
   ['fbclid', 'fbclid'],
   ['ip_address', 'ip_address'],
-  ['company_address', 'Khu vực'],
-  ['company_size', 'Quy mô nhân sự']
+  ['company_address', 'company_address', 'Khu vực', 'region'],
+  ['company_size', 'company_size', 'Quy mô nhân sự', 'Quy mô', 'size']
 ];
 
 function doPost(e) {
@@ -51,6 +55,7 @@ function doPost(e) {
     p.company_name = p.company_name || p.company;
     p.company_address = p.company_address || p.region;
     p.company_size = p.company_size || p.size;
+    p.page_url = p.page_url || p.page;
 
     var book = SpreadsheetApp.openById(SHEET_ID);
     var sheet = getTargetSheet(book);
@@ -106,7 +111,7 @@ function getTargetSheet(book) {
 function mapHeaders(sheet) {
   var lastCol = sheet.getLastColumn();
   var head = lastCol ? sheet.getRange(1, 1, 1, lastCol).getValues()[0] : [];
-  var norm = function (s) { return String(s == null ? '' : s).trim().toLowerCase(); };
+  var norm = function (s) { return String(s == null ? '' : s).normalize('NFC').replace(/\s+/g, ' ').trim().toLowerCase(); };
   var byTitle = {};
   head.forEach(function (h, i) {
     var k = norm(h);
@@ -114,22 +119,109 @@ function mapHeaders(sheet) {
   });
   var map = {};
   var missing = [];
+  var renamed = false;
   COLUMNS.forEach(function (c) {
-    var idx = byTitle[norm(c[0])];
-    if (idx == null) idx = byTitle[norm(c[1])];
-    if (idx == null) missing.push(c);
-    else map[c[0]] = idx;
+    var idx = null;
+    for (var n = 0; n < c.length && idx == null; n++) {
+      if (norm(c[n]) in byTitle) idx = byTitle[norm(c[n])];
+    }
+    if (idx == null) { missing.push(c); return; }
+    map[c[0]] = idx;
+    if (String(head[idx]).trim() !== c[1]) { head[idx] = c[1]; renamed = true; } // đổi tiêu đề cũ thành tiêu đề chuẩn
   });
+  if (renamed) sheet.getRange(1, 1, 1, head.length).setValues([head]);
   if (missing.length) {
-    sheet.getRange(1, lastCol + 1, 1, missing.length).setValues([missing.map(function (c) { return c[1]; })]);
-    missing.forEach(function (c, j) { map[c[0]] = lastCol + j; });
+    // Thêm ngay sau ô tiêu đề cuối cùng có chữ (bản cũ có thể đã ghi dữ liệu vào cột chưa có tiêu đề).
+    var start = 0;
+    head.forEach(function (h, i) { if (norm(h)) start = i + 1; });
+    sheet.getRange(1, start + 1, 1, missing.length).setValues([missing.map(function (c) { return c[1]; })]);
+    missing.forEach(function (c, j) { map[c[0]] = start + j; });
   }
   return map;
 }
 
+/* ===== Sửa các dòng lead cũ bị ghi lệch cột =====
+ * Bản cũ (12/11 – 16/11/2026) ghi theo VỊ TRÍ cột với thứ tự dưới đây, nên dữ liệu bị lệch
+ * so với tiêu đề sheet (vd email nằm ở cột "Công ty", URL trang nằm ở cột "utm_source").
+ * Cách dùng trong Apps Script (chọn tên hàm ở thanh trên cùng > Chạy):
+ *   1. Chạy previewFixOldRows  -> xem Nhật ký thực thi: số dòng sẽ sửa + vài dòng mẫu trước/sau.
+ *   2. Chạy fixOldRows         -> tự tạo tab sao lưu "Backup lead ..." rồi sửa.
+ * Chỉ sửa dòng có dấu hiệu lệch: ô ở vị trí cột 4 chứa "@" (email) VÀ ô ở vị trí cột 7 bắt đầu bằng "http" (URL trang).
+ * Chạy lại nhiều lần cũng không sao: dòng đã sửa không còn dấu hiệu này.
+ */
+var OLD_ORDER = ['time', 'name', 'phone', 'email', 'company_name', 'industry', 'page_url',
+  'utm_campaign', 'utm_source', 'utm_medium', 'utm_content', 'utm_term', 'gclid', 'fbp',
+  'fbclid', 'ip_address', 'company_address', 'company_size'];
+
+function previewFixOldRows() { fixOldRows_(false); }
+function fixOldRows() { fixOldRows_(true); }
+
+function fixOldRows_(apply) {
+  var lock = LockService.getScriptLock();
+  lock.waitLock(30000);
+  try {
+    var book = SpreadsheetApp.openById(SHEET_ID);
+    var sheet = getTargetSheet(book);
+    var map = mapHeaders(sheet); // thêm cột còn thiếu (vd "Trang") nếu chưa có
+    var lastRow = sheet.getLastRow();
+    var lastCol = sheet.getLastColumn();
+    if (lastRow < 2) { Logger.log('Sheet chưa có dữ liệu.'); return; }
+    var head = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+    var data = sheet.getRange(2, 1, lastRow - 1, lastCol).getValues();
+
+    // Cột trong vùng 18 cột đầu không thuộc trường nào: không đụng tới, chỉ cảnh báo.
+    var targets = {};
+    Object.keys(map).forEach(function (k) { targets[map[k]] = true; });
+    var untouched = [];
+    for (var c = 0; c < OLD_ORDER.length && c < lastCol; c++) {
+      if (!targets[c]) untouched.push(head[c] || ('cột ' + (c + 1)));
+    }
+    if (untouched.length) Logger.log('Lưu ý: các cột sau không thuộc trường nào nên giữ nguyên: ' + untouched.join(', '));
+
+    var width = 0;
+    Object.keys(map).forEach(function (k) { width = Math.max(width, map[k] + 1); });
+    width = Math.max(width, Math.min(OLD_ORDER.length, lastCol));
+
+    var fixes = [];
+    data.forEach(function (row, r) {
+      var emailAt = String(row[3] == null ? '' : row[3]);
+      var pageAt = String(row[6] == null ? '' : row[6]);
+      if (emailAt.indexOf('@') === -1 || !/^https?:\/\//i.test(pageAt)) return;
+      if (map.email === 3 && map.page_url === 6) return; // tiêu đề trùng thứ tự cũ: không lệch
+      var out = row.slice(0, width);
+      while (out.length < width) out.push('');
+      OLD_ORDER.forEach(function (k, i) {
+        if (map[k] != null) out[map[k]] = i < row.length ? row[i] : '';
+      });
+      fixes.push({ r: r + 2, before: row, after: out });
+    });
+
+    Logger.log('Số dòng bị lệch cần sửa: ' + fixes.length + ' / ' + data.length);
+    fixes.slice(0, 5).forEach(function (f) {
+      var show = function (arr) {
+        return ['name', 'email', 'company_name', 'page_url', 'utm_source', 'utm_medium', 'utm_campaign']
+          .map(function (k) { return k + '=' + arr[map[k]]; }).join(' | ');
+      };
+      Logger.log('Dòng ' + f.r + '\n  TRƯỚC: ' + show(f.before) + '\n  SAU:   ' + show(f.after));
+    });
+    if (!apply) { Logger.log('Đây là bản xem trước, chưa sửa gì. Chạy fixOldRows để sửa thật.'); return; }
+    if (!fixes.length) return;
+
+    var stamp = Utilities.formatDate(new Date(), 'Asia/Ho_Chi_Minh', 'dd-MM HH:mm:ss');
+    sheet.copyTo(book).setName('Backup lead ' + stamp);
+    fixes.forEach(function (f) {
+      var vals = f.after.map(function (v) { return typeof v === 'string' ? asText(v) : v; });
+      sheet.getRange(f.r, 1, 1, width).setValues([vals]);
+    });
+    Logger.log('Đã sửa ' + fixes.length + ' dòng. Bản sao lưu: tab "Backup lead ' + stamp + '".');
+  } finally {
+    lock.releaseLock();
+  }
+}
+
 // Mở URL trên trình duyệt để kiểm tra script đã chạy.
 function doGet() {
-  return reply({ ok: true, info: 'Lead endpoint đang hoạt động' });
+  return reply({ ok: true, info: 'Lead endpoint đang hoạt động', version: SCRIPT_VERSION });
 }
 
 // Giữ số 0 đầu của số điện thoại, và không để ô bắt đầu bằng = + - @ bị hiểu là công thức.
@@ -179,7 +271,7 @@ function sendLeadNotification(p) {
       + '      <tr><td style="padding: 4px 0;">fbclid:</td><td>' + (p.fbclid || '-') + '</td></tr>'
       + '      <tr><td style="padding: 4px 0;">fbp:</td><td>' + (p.fbp || '-') + '</td></tr>'
       + '      <tr><td style="padding: 4px 0;">IP Address:</td><td>' + (p.ip_address || '-') + '</td></tr>'
-      + '      <tr><td style="padding: 4px 0;">Trang đăng ký:</td><td>' + (p.page || '-') + '</td></tr>'
+      + '      <tr><td style="padding: 4px 0;">Trang đăng ký:</td><td>' + (p.page_url || p.page || '-') + '</td></tr>'
       + '    </table>'
       + '  </div>'
       + '  <div style="background-color: #f4f6f5; padding: 12px 24px; font-size: 12px; color: #6b737b; text-align: center;">'
@@ -209,6 +301,13 @@ function testSendEmail() {
     industry: 'Gỗ, giấy, bao bì',
     utm_source: 'facebook',
     utm_campaign: 'eudr_2026',
-    page: 'https://signup.base.vn/truy-xuat-nguon-goc/'
+    page_url: 'https://signup.base.vn/truy-xuat-nguon-goc/'
   });
+}
+
+// Chạy 1 lần trong Apps Script để đổi ngay tiêu đề cột cũ sang tên chuẩn (không cần chờ có lead mới).
+function standardizeHeaders() {
+  var sheet = getTargetSheet(SpreadsheetApp.openById(SHEET_ID));
+  mapHeaders(sheet);
+  Logger.log('Tiêu đề hiện tại: ' + sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0].join(' | '));
 }
