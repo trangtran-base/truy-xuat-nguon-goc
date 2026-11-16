@@ -57,12 +57,18 @@ function doPost(e) {
     if (sheet.getLastRow() === 0) {
       sheet.appendRow(COLUMNS.map(function (c) { return c[1]; }));
       sheet.setFrozenRows(1);
-    } else {
-      ensureHeaders(sheet);
     }
-    var row = COLUMNS.map(function (c) {
-      if (c[0] === 'time') return Utilities.formatDate(new Date(), 'Asia/Ho_Chi_Minh', 'dd/MM/yyyy HH:mm:ss');
-      return asText(p[c[0]]);
+    // Ghi theo TÊN tiêu đề cột (không theo vị trí), nên đổi thứ tự cột trong sheet vẫn ghi đúng.
+    var colIndex = mapHeaders(sheet);
+    var width = Math.max(sheet.getLastColumn(), 1);
+    var row = [];
+    for (var i = 0; i < width; i++) row.push('');
+    COLUMNS.forEach(function (c) {
+      var idx = colIndex[c[0]];
+      if (idx == null) return;
+      row[idx] = c[0] === 'time'
+        ? Utilities.formatDate(new Date(), 'Asia/Ho_Chi_Minh', 'dd/MM/yyyy HH:mm:ss')
+        : asText(p[c[0]]);
     });
     sheet.appendRow(row);
 
@@ -94,15 +100,31 @@ function getTargetSheet(book) {
   return sheets[0];
 }
 
-// Sheet đã có dòng tiêu đề từ trước: điền tiêu đề cho các cột mới thêm vào COLUMNS (chỉ điền ô trống, không sửa ô đã có).
-function ensureHeaders(sheet) {
-  var range = sheet.getRange(1, 1, 1, COLUMNS.length);
-  var head = range.getValues()[0];
-  var changed = false;
-  COLUMNS.forEach(function (c, i) {
-    if (String(head[i]).trim() === '') { head[i] = c[1]; changed = true; }
+// Đọc dòng tiêu đề, trả về { tên trường: vị trí cột (0-based) }.
+// Khớp tiêu đề với tên trường (vd "utm_source") hoặc tiêu đề hiển thị (vd "Họ và tên"), không phân biệt hoa thường.
+// Trường nào chưa có cột thì thêm cột mới ở cuối sheet, không đụng tới các cột đã có.
+function mapHeaders(sheet) {
+  var lastCol = sheet.getLastColumn();
+  var head = lastCol ? sheet.getRange(1, 1, 1, lastCol).getValues()[0] : [];
+  var norm = function (s) { return String(s == null ? '' : s).trim().toLowerCase(); };
+  var byTitle = {};
+  head.forEach(function (h, i) {
+    var k = norm(h);
+    if (k && !(k in byTitle)) byTitle[k] = i;
   });
-  if (changed) range.setValues([head]);
+  var map = {};
+  var missing = [];
+  COLUMNS.forEach(function (c) {
+    var idx = byTitle[norm(c[0])];
+    if (idx == null) idx = byTitle[norm(c[1])];
+    if (idx == null) missing.push(c);
+    else map[c[0]] = idx;
+  });
+  if (missing.length) {
+    sheet.getRange(1, lastCol + 1, 1, missing.length).setValues([missing.map(function (c) { return c[1]; })]);
+    missing.forEach(function (c, j) { map[c[0]] = lastCol + j; });
+  }
+  return map;
 }
 
 // Mở URL trên trình duyệt để kiểm tra script đã chạy.
