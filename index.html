@@ -947,9 +947,7 @@
 
     /* Màn hình rộng: cho khối rộng hơn khung chung để chữ trong thẻ không bị chật */
     @media (min-width:1300px) {
-      .chain-flow,
-      #eudr .dl-grid,
-      #eudr .dl-src {
+      .chain-flow {
         margin-inline: calc((1136px - min(1250px, 100vw - 48px)) / 2)
       }
     }
@@ -2680,7 +2678,7 @@
 
     /* 4 mốc EUDR: dạng cột, ngăn cách bằng đường kẻ dọc */
     .dl-card {
-      padding: 6px 26px 8px;
+      padding: 4px 22px 6px;
       border-left: 1px solid #dfe6e2
     }
 
@@ -2711,7 +2709,7 @@
 
     .dl-card small {
       display: block;
-      font-size: 12px;
+      font-size: 11px;
       font-weight: 700;
       letter-spacing: .06em;
       text-transform: uppercase;
@@ -2721,7 +2719,7 @@
     .dl-card b {
       display: block;
       margin-top: 6px;
-      font-size: clamp(22px, calc(2.4vw - 2px), 28px);
+      font-size: clamp(20px, calc(2vw - 2px), 24px);
       line-height: 1.15;
       font-weight: 800;
       letter-spacing: -.02em;
@@ -2729,8 +2727,8 @@
     }
 
     .dl-card p {
-      margin-top: 6px;
-      font-size: 14px;
+      margin-top: 5px;
+      font-size: 13px;
       line-height: 1.5;
       color: var(--ink-2)
     }
@@ -5533,11 +5531,6 @@
             </div>
           </li>
         </ol>
-
-        <div class="cap-cta"><a class="cap-btn" href="#dang-ky">Đánh giá giải pháp cùng chuyên gia<svg class="si" width="20"
-              height="20" aria-hidden="true">
-              <use href="#i-arrow" />
-            </svg></a></div>
       </div>
     </section>
 
@@ -5677,14 +5670,6 @@
           </article>
         </div>
 
-        <div class="lt-cta">
-          <div>
-            <h3>Doanh nghiệp anh chị giống trường hợp nào?</h3>
-            <p>Rà soát 1-1 trên một lô hàng thực tế để biết nên đi lộ trình A hay B.</p>
-          </div><a class="btn btn-blue" href="#dang-ky">Đặt lịch rà soát 1-1 →</a>
-        </div>
-        <p class="lt-note">Số liệu do doanh nghiệp cung cấp, cập nhật tại thời điểm triển khai. Tên, logo và trích dẫn được sử
-          dụng khi có sự đồng ý của doanh nghiệp.</p>
       </div>
     </section>
 
