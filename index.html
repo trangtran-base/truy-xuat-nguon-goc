@@ -436,6 +436,49 @@
       box-shadow: 0 24px 50px -26px rgba(0, 0, 0, .65)
     }
 
+    /* Dải chứng nhận dưới form đăng ký */
+    .fc-trust {
+      margin-top: 14px;
+      padding-top: 14px;
+      border-top: 1px dashed #dbe3df
+    }
+
+    .fc-trust p {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      font-size: 12.5px;
+      line-height: 1.5;
+      color: var(--ink-2)
+    }
+
+    .fc-trust p .si {
+      margin-top: 2px;
+      color: #1f9a4f
+    }
+
+    .fc-trust ul {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin: 10px 0 0;
+      padding: 0;
+      list-style: none
+    }
+
+    .fc-trust li {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 10px;
+      border: 1px solid #cfe7d8;
+      border-radius: 999px;
+      background: #f2faf5;
+      color: #17663b;
+      font-size: 12px;
+      font-weight: 700
+    }
+
     .form-card h2 {
       font-size: 25px;
       letter-spacing: -.012em
@@ -5050,6 +5093,23 @@
               <a class="btn btn-sm done-home" href="#">Về trang chủ</a>
               <button class="btn btn-sm done-again" type="button">Đăng ký thông tin khác</button>
             </div>
+          </div>
+          <div class="fc-trust">
+            <p><svg class="si" width="15" height="15" aria-hidden="true">
+                  <use href="#i-lock" />
+                </svg><span>Hồ sơ truy xuất EUDR phải lưu trữ tối thiểu 5 năm. Dữ liệu trên Base được bảo vệ theo
+                các tiêu chuẩn:</span></p>
+            <ul aria-label="Chứng nhận bảo mật và chất lượng">
+              <li><svg class="si" width="13" height="13" aria-hidden="true">
+                  <use href="#i-shield" />
+                </svg>ISO/IEC 27001</li>
+              <li><svg class="si" width="13" height="13" aria-hidden="true">
+                  <use href="#i-shield" />
+                </svg>ISO 9001</li>
+              <li><svg class="si" width="13" height="13" aria-hidden="true">
+                  <use href="#i-shield" />
+                </svg>VSEC</li>
+            </ul>
           </div>
         </aside>
 
