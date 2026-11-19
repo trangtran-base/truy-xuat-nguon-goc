@@ -20,7 +20,7 @@ var SHEET_GID = '874816478'; // GID của tab nhận lead (từ URL: gid=8748164
 var SHEET_NAME = ''; // Để trống hoặc điền tên tab. Ưu tiên tìm theo SHEET_GID trước.
 var NOTIFY_EMAILS = 'trang.tran@base.vn, hoa.nguyen02@base.vn'; // Danh sách email nhận thông báo khi có lead mới
 
-var SCRIPT_VERSION = 'v4-chuan-hoa-ten-cot'; // Mở URL /exec trên trình duyệt để xem bản đang chạy
+var SCRIPT_VERSION = 'v5-ab-variant'; // Mở URL /exec trên trình duyệt để xem bản đang chạy
 
 // [tên trường gửi từ form, tiêu đề cột CHUẨN trong sheet, ...tên tiêu đề cũ]
 // Script ghi theo TÊN tiêu đề cột nên thứ tự cột trong sheet không quan trọng.
@@ -33,6 +33,7 @@ var COLUMNS = [
   ['company_name', 'company_name', 'Công ty', 'Tên công ty', 'company'],
   ['industry', 'industry', 'Ngành hàng', 'Ngành'],
   ['page_url', 'page_url', 'Trang', 'page', 'URL', 'Landing page', 'Trang đăng ký'],
+  ['variant', 'variant', 'Phiên bản'],
   ['utm_campaign', 'utm_campaign'],
   ['utm_source', 'utm_source'],
   ['utm_medium', 'utm_medium'],
@@ -272,6 +273,7 @@ function sendLeadNotification(p) {
       + '      <tr><td style="padding: 4px 0;">fbp:</td><td>' + (p.fbp || '-') + '</td></tr>'
       + '      <tr><td style="padding: 4px 0;">IP Address:</td><td>' + (p.ip_address || '-') + '</td></tr>'
       + '      <tr><td style="padding: 4px 0;">Trang đăng ký:</td><td>' + (p.page_url || p.page || '-') + '</td></tr>'
+      + '      <tr><td style="padding: 4px 0;">Phiên bản trang (A/B):</td><td>' + (p.variant || '-') + '</td></tr>'
       + '    </table>'
       + '  </div>'
       + '  <div style="background-color: #f4f6f5; padding: 12px 24px; font-size: 12px; color: #6b737b; text-align: center;">'

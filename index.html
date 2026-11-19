@@ -4,6 +4,28 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script>
+    /* A/B test 50:50 giữa index.html (A) và index-b.html (B).
+       Lần đầu vào: gán ngẫu nhiên A hoặc B, lưu cookie 90 ngày; người thuộc nhóm kia được chuyển sang đúng trang.
+       Giữ nguyên tham số UTM/gclid/fbclid. Ép xem một bản để kiểm thử: thêm ?ab=a hoặc ?ab=b vào đường dẫn. */
+    (function () {
+      var PAGE = 'A';
+      var URLS = { A: './', B: 'index-b.html' }; /* Đường dẫn tương đối: đặt 2 file cùng một thư mục */
+      try {
+        if (/bot|crawl|spider|slurp|facebookexternalhit|preview|lighthouse/i.test(navigator.userAgent)) return;
+        var q = new URLSearchParams(location.search);
+        var forced = (q.get('ab') || '').toUpperCase();
+        var m = document.cookie.match(/(?:^|;s*)ab_eudr=([AB])/);
+        var v = forced === 'A' || forced === 'B' ? forced : (m ? m[1] : (Math.random() < 0.5 ? 'A' : 'B'));
+        document.cookie = 'ab_eudr=' + v + '; max-age=' + 90 * 86400 + '; path=/; SameSite=Lax';
+        if (v !== PAGE) {
+          q.delete('ab');
+          var s = q.toString();
+          location.replace(new URL(URLS[v], location.href).pathname + (s ? '?' + s : '') + location.hash);
+        }
+      } catch (e) { }
+    })();
+  </script>
   <title>Truy xuất nguồn gốc chuẩn EUDR cho doanh nghiệp xuất khẩu | Base</title>
   <meta name="description"
     content="Base nối dữ liệu từ ERP, trạm cân, kho, Excel đang dùng thành một chuỗi: từ vùng trồng đến container. Kiểm tra hồ sơ EUDR của một lô hàng thật trong 30 phút, miễn phí.">
@@ -4979,6 +5001,7 @@
             <input type="hidden" name="fbp" id="f-fbp">
             <input type="hidden" name="fbclid" id="f-fbclid">
             <input type="hidden" name="ip_address" id="f-ip_address">
+            <input type="hidden" name="variant" id="f-variant" value="A">
             <div aria-hidden="true" style="position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden">
               <label for="f-website">Website</label>
               <input type="text" name="website" id="f-website" tabindex="-1" autocomplete="off">
@@ -6687,7 +6710,7 @@
 
           // Append form data chuẩn hóa và UTM params vào URL trang cảm ơn
           var redirectUrl = CONFIG.thankYouUrl;
-          var exportFields = ['name', 'phone', 'company_name', 'email', 'company_address', 'company_size', 'industry', 'utm_campaign', 'utm_source', 'utm_medium', 'utm_content', 'utm_term', 'gclid', 'fbp', 'fbclid', 'ip_address'];
+          var exportFields = ['name', 'phone', 'company_name', 'email', 'company_address', 'company_size', 'industry', 'utm_campaign', 'utm_source', 'utm_medium', 'utm_content', 'utm_term', 'gclid', 'fbp', 'fbclid', 'ip_address', 'variant'];
           try {
             var u = new URL(CONFIG.thankYouUrl, location.href);
             exportFields.forEach(function (k) {
