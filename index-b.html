@@ -5154,6 +5154,11 @@
         });
         if (!data.fbp) data.fbp = qs.get('fbp') || getCookie('_fbp') || getCookie('fbp') || '';
         if (!data.ip_address) data.ip_address = getCookie('ip_address') || (ipEl && ipEl.value) || '';
+        /* A/B test: gắn phiên bản trang vào cuối utm_content (giữ nguyên tên mẫu quảng cáo gốc), vd "Content.02 | LDP-B" */
+        var abTag = data.variant ? 'LDP-' + String(data.variant).trim() : '';
+        if (abTag && String(data.utm_content || '').indexOf(abTag) === -1) {
+          data.utm_content = data.utm_content ? data.utm_content + ' | ' + abTag : abTag;
+        }
         data.page_url = (window.top && window.top !== window ? document.referrer : location.href).split('#')[0];
         btn.disabled = true;
         msg.className = 'form-msg';
