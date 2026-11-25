@@ -5,10 +5,11 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <script>
-    /* A/B test 50:50 giữa index.html (A) và index-b.html (B).
+    /* A/B test giữa index.html (A) và index-b.html (B), tỉ lệ đặt ở SHARE_A.
        Lần đầu vào: gán ngẫu nhiên A hoặc B, lưu cookie 90 ngày; người thuộc nhóm kia được chuyển sang đúng trang.
        Giữ nguyên tham số UTM/gclid/fbclid. Ép xem một bản để kiểm thử: thêm ?ab=a hoặc ?ab=b vào đường dẫn. */
     (function () {
+      var SHARE_A = 0.2; /* Tỉ lệ khách mới vào bản A (0.2 = 20% A / 80% B) */
       var PAGE = 'A';
       var URLS = { A: './', B: 'index-b.html' }; /* Đường dẫn tương đối: đặt 2 file cùng một thư mục */
       try {
@@ -20,7 +21,7 @@
         var saved = '';
         try { saved = localStorage.getItem('ab_eudr') || ''; } catch (e) { }
         if (!saved) { var m = document.cookie.match(/(?:^|;s*)ab_eudr=([AB])/); saved = m ? m[1] : ''; }
-        var v = forced === 'A' || forced === 'B' ? forced : (saved === 'A' || saved === 'B' ? saved : (Math.random() < 0.5 ? 'A' : 'B'));
+        var v = forced === 'A' || forced === 'B' ? forced : (saved === 'A' || saved === 'B' ? saved : (Math.random() < SHARE_A ? 'A' : 'B'));
         try { localStorage.setItem('ab_eudr', v); } catch (e) { }
         document.cookie = 'ab_eudr=' + v + '; max-age=' + 90 * 86400 + '; path=/' + (location.protocol === 'https:' ? '; SameSite=None; Secure' : '; SameSite=Lax');
         if (v !== PAGE) {
